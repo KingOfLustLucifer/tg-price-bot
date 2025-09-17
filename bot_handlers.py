@@ -13,7 +13,6 @@ HELP_TEXT = (
     "/crypto <SYMBOL> – harga crypto (BTC, ETH, dll)\n"
     "/gold – harga emas XAU di IDR\n"
     "/fx <PAIR> – kurs FX (mis. USDIDR, USDJPY)\n"
-    "/rd <CODE> – NAV reksadana (IDN)\n"
     "/watchlist – lihat watchlist\n"
     "/addwatch <ASSET> – tambah ke watchlist\n"
     "/delwatch <ASSET> – hapus dari watchlist\n"
