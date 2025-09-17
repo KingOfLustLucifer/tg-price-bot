@@ -1,7 +1,0 @@
-fastapi==0.115.0
-uvicorn[standard]==0.30.6
-python-telegram-bot==20.7
-yfinance==0.2.43
-pandas==2.2.2
-gspread==6.1.4
-google-auth==2.35.0
