@@ -1,9 +1,10 @@
 from telegram import Update
 from telegram.ext import CommandHandler, ContextTypes, Application
+
 from adapters.stocks import get_stock_price
 from adapters.crypto import get_crypto_price_idr
 from adapters.fx import get_fx_rate
-from adapters.gold import get_gold_price_idr
+from adapters.gold import get_gold_price_idr  # <- sumber Indonesia (Antam/Pegadaian)
 from utils.formatting import fmt_idr, fmt_usd
 
 HELP_TEXT = (
@@ -11,7 +12,7 @@ HELP_TEXT = (
     "Perintah yang tersedia:\n"
     "/price <TICKER> – harga saham (yfinance)\n"
     "/crypto <SYMBOL> – harga crypto (BTC, ETH, dll)\n"
-    "/gold – harga emas XAU di IDR\n"
+    "/gold – harga emas Indonesia per gram (Antam; fallback Pegadaian)\n"
     "/fx <PAIR> – kurs FX (mis. USDIDR, USDJPY)\n"
     "/watchlist – lihat watchlist\n"
     "/addwatch <ASSET> – tambah ke watchlist\n"
@@ -49,13 +50,25 @@ async def cmd_crypto(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"Gagal mengambil harga crypto: {data['error']}")
 
 async def cmd_gold(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Menampilkan harga emas Indonesia per gram:
+    - Sumber utama: Antam (logammulia.com)
+    - Fallback: Pegadaian (pegadaian.co.id)
+    - USD/gram ditampilkan sebagai referensi (dihitung dari kurs USDIDR)
+    """
     data = await get_gold_price_idr()
     if data["ok"]:
-        usd_txt = fmt_usd(data['usd'])
         idr_txt = fmt_idr(data['idr']) if data['idr'] else "N/A"
-        await update.message.reply_text(f"Emas per gram ≈ {usd_txt} | ≈ {idr_txt}")
+        usd_txt = fmt_usd(data['usd']) if data.get('usd') else None
+        src = data.get("source") or "Indonesia"
+        msg = f"💰 Emas per gram ({src}): {idr_txt}"
+        if usd_txt:
+            msg += f"  (~ {usd_txt})"
+        msg += "\nSumber: logammulia.com (fallback: pegadaian.co.id)\n" \
+               "Catatan: harga ritel Indonesia biasanya > harga spot global."
+        await update.message.reply_text(msg)
     else:
-        await update.message.reply_text(f"Gagal mengambil harga emas: {data['error']}")
+        await update.message.reply_text(f"Gagal mengambil harga emas: {data.get('error','unknown')}")
 
 async def cmd_fx(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
@@ -67,7 +80,6 @@ async def cmd_fx(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"{pair}: {data['rate']}")
     else:
         await update.message.reply_text(f"Gagal mengambil kurs {pair}: {data['error']}")
-
 
 async def cmd_watchlist(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from utils.sheets import get_watchlist
@@ -100,7 +112,7 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("price", cmd_price))
     app.add_handler(CommandHandler("crypto", cmd_crypto))
-    app.add_handler(CommandHandler("gold", cmd_gold))
+    app.add_handler(CommandHandler("gold", cmd_gold))      # <- sudah pakai harga Indonesia
     app.add_handler(CommandHandler("fx", cmd_fx))
     app.add_handler(CommandHandler("watchlist", cmd_watchlist))
     app.add_handler(CommandHandler("addwatch", cmd_addwatch))
